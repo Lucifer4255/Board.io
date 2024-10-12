@@ -32,8 +32,8 @@ const Canvas = forwardRef<CanvasHandle, CanvasProps>(({ color, size }, ref) => {
     if (context) {
       context.scale(2, 2);  // High resolution scaling
       context.lineCap = 'round';  // Smooth lines
-      context.strokeStyle = 'white';  // Set brush color
-      context.lineWidth = 5;  // Set brush size
+      context.strokeStyle = color;  // Set brush color
+      context.lineWidth = size;  // Set brush size
       contextRef.current = context;
     }
   }, [color, size]);

@@ -11,7 +11,7 @@ export default function Home() {
       <p className="basis-1/6 text-xl text-muted-foreground">
         A digital whiteboard for remote teams and collaboration.
       </p>
-      <Link className={buttonVariants({ variant: "default" })} href='/Canvas'>
+      <Link className={buttonVariants({ variant: "default" })} href='/Board'>
       <Pencil1Icon className="mr-2 h-4 w-4" /><span className="font-bold font-mono">Get Started</span>
       </Link>
     </div>
