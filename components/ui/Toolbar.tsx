@@ -1,24 +1,24 @@
 import React, { useState } from "react";
+import { useDrawingContext } from "@/context/DrawingContext";
+import clsx from "clsx";
 import { Button } from "./button";
+import { EraserIcon } from "@radix-ui/react-icons"
 interface ToolbarProps {
-  setColor: (color: string) => void;
-  setSize: (size: number) => void;
   clearCanvas: () => void;
   sendCanvasData: () => void; // Function to send canvas data to server for processing.
 }
 const colors = ['#FF5733', '#33FF57', '#3357FF', '#FFFF33', '#FF33FF', '#333333', '#FFFFFF'];
 
 export default function Toolbar({
-  setColor,
-  setSize,
   clearCanvas,
   sendCanvasData // Function to send canvas data to server for processing.
 }: ToolbarProps) {
   const [currentColor, setCurrentColor] = useState(colors[0]);
-
+  const { setColor, setSize,isEraser ,setIsEraser } = useDrawingContext(); // Get the drawing context from the context provider.
   const handleColorChange = (color :string) => {
     setCurrentColor(color);
     setColor(color);
+    setIsEraser(false);
   };
   return (
     <div style={{ padding: '10px', display: 'flex', gap: '20px', alignItems: 'center' }}>
@@ -56,6 +56,11 @@ export default function Toolbar({
       </label>
 
       {/* Clear Canvas Button */}
+      <Button className = {clsx({'bg-gray-100' : isEraser === false,
+                                 'bg-white-100' : isEraser === true})} 
+                                 onClick={() => setIsEraser(!isEraser)} >
+      <EraserIcon className="mr-2 h-4 w-4" /> Eraser
+      </Button>
       <Button onClick={clearCanvas}>Clear Canvas</Button>
       <Button onClick={sendCanvasData}>Calculate</Button>
     </div>
