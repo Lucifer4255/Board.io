@@ -6,6 +6,8 @@ import { DrawingProvider } from "@/context/DrawingContext";
 import Toolbar from "@/components/ui/Toolbar";
 import { useRef, useState } from "react";
 // import { Button } from "@/components/ui/button";
+import katex from "katex";
+import "katex/dist/katex.min.css";
 
 interface dataType {
   expr: string;
@@ -23,6 +25,17 @@ export default function Page() {
       context.clearRect(0, 0, context.canvas.width, context.canvas.height);
     }
   };
+  // const convertLatexToText = (latexExpr: string): string => {
+  //   try {
+  //     // Render the LaTeX expression to HTML using KaTeX and extract the plain text
+  //     const html = katex.renderToString(latexExpr, { throwOnError: false });
+  //     const doc = new DOMParser().parseFromString(html, "text/html");
+  //     return doc.body.textContent || "";
+  //   } catch (error) {
+  //     console.error("Error converting LaTeX to text:", error);
+  //     return latexExpr; // Return the original string if conversion fails
+  //   }
+  // };
   const PrintCanvas = (dictOfVars: dataType[] | null) => {
     const context = canvasRef.current?.getContext();
     if (context) {
@@ -34,8 +47,14 @@ export default function Page() {
         const context = canvasRef.current?.getContext();
         console.log(idx);
         if (context) {
-          context.font = "50px Arial";
+          context.font = "2em Open sans";
           context.fillStyle = "white";
+
+          // const exprText = convertLatexToText(data.expr);
+          // const resultText = convertLatexToText(data.result);
+
+          // console.log(exprText, resultText);
+          // Draw the converted expressions on the canvas
           context.fillText(
             `${data.expr} = ${data.result}`,
             50 * (idx + 1),
@@ -69,8 +88,10 @@ export default function Page() {
         if (response.ok) {
           setMessage(message); // Success message from the server
           console.log(result);
-          const res = await JSON.parse(result);
-          console.log(res);
+          const extracted_res = result.slice(7, result.length - 3);
+          // console.log(extracted_res);
+          const res = await JSON.parse(extracted_res);
+          console.log(typeof res);
           setDictOfVars(res); // Update the dictionary of variables with the server's result
           // console.log(dictOfVars); //
           // console.log(typeof result);
