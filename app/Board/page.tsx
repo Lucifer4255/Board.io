@@ -7,7 +7,7 @@ import Toolbar from "@/components/ui/Toolbar";
 import { useRef, useState } from "react";
 // import { Button } from "@/components/ui/button";
 // import katex from "katex";
-import "katex/dist/katex.min.css";
+// import "katex/dist/katex.min.css";
 
 interface dataType {
   expr: string;
