@@ -88,8 +88,9 @@ export default function Page() {
         if (response.ok) {
           setMessage(message); // Success message from the server
           console.log(result);
-          const extracted_res = result.slice(7, result.length - 3);
+          const extracted_res = result.trim().slice(7, result.length - 4);
           // console.log(extracted_res);
+          // const resf = await JSON.stringify(extracted_res);
           const res = await JSON.parse(extracted_res);
           console.log(typeof res);
           setDictOfVars(res); // Update the dictionary of variables with the server's result
