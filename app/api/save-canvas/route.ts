@@ -49,7 +49,7 @@ Abstract Concepts:
 [{ "expr": "image interpretation", "result": "concept" }]
 Use code with caution.
 
-Give the JSON representation in exact format as mentioned
+Give the JSON representation in exact format as mentioned for all the different methods like dont include headings like "Graphical Math:"
 Remember to use BODMAS for calculations."`
 
         const result = await model.generateContent([prompt, img]);
