@@ -94,7 +94,7 @@ const Canvas = forwardRef<CanvasHandle>((_, ref) => {
       setHistoryIndex(historyIndex + 1);
     }
   };
-
+  
   // Restore canvas from a base64 image
   const restoreCanvas = (imageData: string) => {
   const canvas = canvasRef.current;

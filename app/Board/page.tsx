@@ -57,8 +57,8 @@ export default function Page() {
           // Draw the converted expressions on the canvas
           context.fillText(
             `${data.expr} = ${data.result}`,
-            50 * (idx + 1),
-            80 * (idx + 1)
+            80 * (idx + 1),
+            120 * (idx + 1)
           );
         }
         console.log(`${data.expr} = ${data.result}`);
@@ -117,10 +117,10 @@ export default function Page() {
 
   return (
     <DrawingProvider>
-      <div>
+      <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50">
         <Toolbar clearCanvas={clearCanvas} sendCanvasData={sendCanvasData} />
-        <Canvas ref={canvasRef} />
       </div>
+        <Canvas ref={canvasRef} />
     </DrawingProvider>
   );
 }
