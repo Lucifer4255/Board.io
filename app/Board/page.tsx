@@ -84,16 +84,12 @@ export default function Page() {
 
         const resp = await response.json();
         console.log(resp);
-        const { message, result } = resp;
+        const { message, result, extractedText } = resp;
         if (response.ok) {
           setMessage(message); // Success message from the server
-          console.log(result);
-          const extracted_res = result.trim().slice(7, result.length - 4);
-          // console.log(extracted_res);
-          // const resf = await JSON.stringify(extracted_res);
-          const res = await JSON.parse(extracted_res);
-          console.log(typeof res);
-          setDictOfVars(res); // Update the dictionary of variables with the server's result
+          console.log("OCR text:", extractedText);
+          console.log("Result:", result);
+          setDictOfVars(result as dataType[]); // API now returns parsed JSON
           // console.log(dictOfVars); //
           // console.log(typeof result);
           // await PrintCanvas(dictOfVars);
