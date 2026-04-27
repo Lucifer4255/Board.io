@@ -110,8 +110,11 @@ export default function Page() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ image }),
       });
-      const d1 = await r1.json();
-      if (!r1.ok) throw new Error(d1.message ?? "Stage 1 failed");
+      const t1 = await r1.text();
+      let d1: Record<string, unknown>;
+      try { d1 = JSON.parse(t1); }
+      catch { throw new Error(`Stage 1 failed: ${t1.slice(0, 200)}`); }
+      if (!r1.ok) throw new Error((d1.message as string) ?? "Stage 1 failed");
       recognizedLatex = d1.latex as string;
       setUsage((u) => ({ ...u, recognize: d1.usage ?? {} }));
     } catch (err) {
@@ -130,8 +133,11 @@ export default function Page() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ latex: recognizedLatex }),
       });
-      const d2 = await r2.json();
-      if (!r2.ok) throw new Error(d2.message ?? "Stage 2 failed");
+      const t2 = await r2.text();
+      let d2: Record<string, unknown>;
+      try { d2 = JSON.parse(t2); }
+      catch { throw new Error(`Stage 2 failed: ${t2.slice(0, 200)}`); }
+      if (!r2.ok) throw new Error((d2.message as string) ?? "Stage 2 failed");
       solvedResult = d2.result as string;
       setUsage((u) => ({ ...u, solve: d2.usage ?? {} }));
     } catch (err) {
