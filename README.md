@@ -2,7 +2,7 @@
 
 A dynamic drawing canvas application inspired by Apple's Math app. It allows users to inscribe equations or logical problems and receive instant solutions using real-time computation and analysis.
 
-<img width="1080" height="1920" alt="board-io" src="https://github.com/user-attachments/assets/50d120e4-9931-4060-90a8-6c209e7d18b4" />
+<img width="1080" height="548" alt="board-io" src="https://github.com/user-attachments/assets/50d120e4-9931-4060-90a8-6c209e7d18b4" />
 
 
 ## 🚀 Features
