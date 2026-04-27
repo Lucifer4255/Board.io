@@ -1,22 +1,38 @@
 import React, { useRef, useState, useEffect, forwardRef, useImperativeHandle } from 'react';
 import { useDrawingContext } from '@/context/DrawingContext';
+
 export interface CanvasHandle {
   getContext: () => CanvasRenderingContext2D | null;
+  getStrokes: () => [number, number][][];
+  clearStrokes: () => void;
 }
 
 const Canvas = forwardRef<CanvasHandle>((_, ref) => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const contextRef = useRef<CanvasRenderingContext2D | null>(null);
   const [isDrawing, setIsDrawing] = useState(false);
-  const {color, size , isEraser} = useDrawingContext();
+  const { color, size, isEraser } = useDrawingContext();
+  const isEraserRef = useRef(isEraser);
 
-  const [history, setHistory] = useState<string[]>([]);  // Store canvas snapshots
-  const [historyIndex, setHistoryIndex] = useState<number>(-1);  // Track current history position
+  const [history, setHistory] = useState<string[]>([]);
+  const [historyIndex, setHistoryIndex] = useState<number>(-1);
 
+  // Stroke tracking for recognition (not tied to render cycle)
+  const strokesRef = useRef<[number, number][][]>([]);
+  const currentStrokeRef = useRef<[number, number][]>([]);
+  const pointIndexRef = useRef(0);
 
   useImperativeHandle(ref, () => ({
     getContext() {
       return canvasRef.current ? canvasRef.current.getContext('2d') : null;
+    },
+    getStrokes() {
+      return strokesRef.current;
+    },
+    clearStrokes() {
+      strokesRef.current = [];
+      currentStrokeRef.current = [];
+      pointIndexRef.current = 0;
     },
   }));
 
@@ -40,42 +56,57 @@ const Canvas = forwardRef<CanvasHandle>((_, ref) => {
   }, []);
 
   useEffect(() => {
-    if(contextRef.current){
+    if (contextRef.current) {
       contextRef.current.strokeStyle = isEraser ? '#09090B' : color;
       contextRef.current.lineWidth = size;
+      isEraserRef.current = isEraser;
     }
-  }, [color, size , isEraser]);
+  }, [color, size, isEraser]);
 
   const saveCanvasState = () => {
     const canvas = canvasRef.current;
     if (canvas) {
       const snapshot = canvas.toDataURL();
-      // Keep only history up to the current point, then add new state
       const newHistory = [...history.slice(0, historyIndex + 1), snapshot];
       setHistory(newHistory);
       setHistoryIndex(newHistory.length - 1);
     }
   };
 
-
-  const startDrawing = (e: React.MouseEvent<HTMLCanvasElement>) => {
+  const startDrawing = (e: React.PointerEvent<HTMLCanvasElement>) => {
     const { offsetX, offsetY } = e.nativeEvent;
     contextRef.current?.beginPath();
     contextRef.current?.moveTo(offsetX, offsetY);
     setIsDrawing(true);
+    if (!isEraserRef.current) {
+      currentStrokeRef.current = [[offsetX, offsetY]];
+      pointIndexRef.current = 1;
+    }
   };
 
-  const draw = (e: React.MouseEvent<HTMLCanvasElement>) => {
+  const draw = (e: React.PointerEvent<HTMLCanvasElement>) => {
     if (!isDrawing) return;
     const { offsetX, offsetY } = e.nativeEvent;
     contextRef.current?.lineTo(offsetX, offsetY);
     contextRef.current?.stroke();
+    if (!isEraserRef.current) {
+      pointIndexRef.current += 1;
+      // keep every 2nd point to reduce payload
+      if (pointIndexRef.current % 2 === 0) {
+        currentStrokeRef.current.push([offsetX, offsetY]);
+      }
+    }
   };
 
   const stopDrawing = () => {
     contextRef.current?.closePath();
     setIsDrawing(false);
     saveCanvasState();
+    if (!isEraserRef.current && currentStrokeRef.current.length > 0) {
+      strokesRef.current = [...strokesRef.current, currentStrokeRef.current];
+      currentStrokeRef.current = [];
+      pointIndexRef.current = 0;
+    }
   };
 
   const handleUndo = () => {
@@ -141,11 +172,11 @@ const Canvas = forwardRef<CanvasHandle>((_, ref) => {
   return (
     <canvas
       ref={canvasRef}
-      onMouseDown={startDrawing}
-      onMouseMove={draw}
-      onMouseUp={stopDrawing}
-      onMouseLeave={stopDrawing}
-      style={{ border: '1px solid #000' }}
+      onPointerDown={startDrawing}
+      onPointerMove={draw}
+      onPointerUp={stopDrawing}
+      onPointerLeave={stopDrawing}
+      style={{ border: '1px solid #000', touchAction: 'none' }}
     />
   );
 });

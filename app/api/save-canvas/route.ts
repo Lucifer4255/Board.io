@@ -3,11 +3,8 @@ import { NextResponse } from "next/server";
 interface SaveCanvasPayload {
     image?: string;
     text?: string;
+    debug?: boolean;
 }
-
-type OpenAIContentPart =
-    | { type: "text"; text: string }
-    | { type: "image_url"; image_url: { url: string; detail?: "auto" | "low" | "high" } };
 
 type OpenRouterChatResponse = {
     id?: string;
@@ -18,6 +15,13 @@ type OpenRouterChatResponse = {
         };
     }>;
 };
+
+function extractBase64FromDataUrl(dataUrl: string) {
+    const match = dataUrl.match(/^data:([^;]+);base64,(.+)$/);
+    if (!match) return null;
+    const [, mimeType, base64] = match;
+    return { mimeType, base64 };
+}
 
 function tryParseJson<T>(input: string): { ok: true; value: T } | { ok: false; error: string } {
     try {
@@ -38,6 +42,7 @@ function stripCodeFences(text: string) {
 export async function POST(req: Request) {
     try {
         const data = (await req.json()) as SaveCanvasPayload;
+        const debug = Boolean(data.debug);
 
         const apiKey = process.env.OPENROUTER_API_KEY;
         if (!apiKey) {
@@ -50,36 +55,44 @@ export async function POST(req: Request) {
         // 1) OCR (optional): if caller provides an image, turn it into text.
         // If caller already provides text, skip OCR.
         let extractedText = (data.text ?? "").trim();
+        let ocrModelUsed: string | undefined;
+        let ocrRaw: string | undefined;
         if (!extractedText && data.image) {
-            const ocrModel = process.env.OPENROUTER_OCR_MODEL ?? "qwen/qwen2.5-vl-3b-instruct:free";
-            const ocrReq = {
-                model: ocrModel,
-                temperature: 0,
-                messages: [
-                    {
-                        role: "system",
-                        content:
-                            "You are an OCR engine for handwritten math. Extract the visible text faithfully. " +
-                            "Return ONLY the extracted text, with no markdown, no code fences, no explanation.",
-                    },
-                    {
-                        role: "user",
-                        content: [
-                            { type: "text", text: "Extract all handwritten math/text from this image." },
-                            { type: "image_url", image_url: { url: data.image, detail: "low" } },
-                        ] as OpenAIContentPart[],
-                    },
-                ],
-            };
+            const googleKey = process.env.GOOGLE_OCR_API_KEY ?? process.env.API_KEY;
+            if (!googleKey) {
+                return NextResponse.json(
+                    { message: "Missing GOOGLE_OCR_API_KEY (or API_KEY) for Google OCR" },
+                    { status: 500 }
+                );
+            }
 
-            const ocrResp = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+            const extracted = extractBase64FromDataUrl(data.image);
+            if (!extracted) {
+                return NextResponse.json(
+                    { message: "Invalid image data URL" },
+                    { status: 400 }
+                );
+            }
+
+            ocrModelUsed = "google-cloud-vision:text-detection";
+
+            const ocrResp = await fetch(
+                `https://vision.googleapis.com/v1/images:annotate?key=${encodeURIComponent(googleKey)}`,
+                {
                 method: "POST",
                 headers: {
-                    Authorization: `Bearer ${apiKey}`,
                     "Content-Type": "application/json",
                 },
-                body: JSON.stringify(ocrReq),
-            });
+                body: JSON.stringify({
+                    requests: [
+                        {
+                            image: { content: extracted.base64 },
+                            features: [{ type: "DOCUMENT_TEXT_DETECTION" }],
+                        },
+                    ],
+                }),
+                }
+            );
 
             if (!ocrResp.ok) {
                 const text = await ocrResp.text();
@@ -89,8 +102,31 @@ export async function POST(req: Request) {
                 );
             }
 
-            const ocrJson = (await ocrResp.json()) as OpenRouterChatResponse;
-            extractedText = String(ocrJson?.choices?.[0]?.message?.content ?? "").trim();
+            const ocrJson = (await ocrResp.json()) as {
+                responses?: Array<{
+                    fullTextAnnotation?: { text?: string };
+                    textAnnotations?: Array<{ description?: string }>;
+                    error?: { message?: string };
+                }>;
+            };
+
+            const first = ocrJson.responses?.[0];
+            const googleError = first?.error?.message;
+            if (googleError) {
+                return NextResponse.json(
+                    { message: "Google OCR error", body: googleError },
+                    { status: 502 }
+                );
+            }
+
+            extractedText =
+                String(first?.fullTextAnnotation?.text ?? first?.textAnnotations?.[0]?.description ?? "").trim();
+            ocrRaw = extractedText;
+
+            console.log("[save-canvas][ocr]", {
+                model: ocrModelUsed,
+                extractedText,
+            });
         }
 
         if (!extractedText) {
@@ -102,6 +138,7 @@ export async function POST(req: Request) {
 
         // 2) Solve: use a text model and return strict JSON.
         const solveModel = process.env.OPENROUTER_SOLVE_MODEL ?? "openrouter/free";
+        const solveModelRequested = solveModel;
         const solvePrompt =
             `You will receive OCR-extracted math text.\n` +
             `Return ONLY valid JSON: an array of objects, each with keys "expr" and "result".\n` +
@@ -131,7 +168,15 @@ export async function POST(req: Request) {
         }
 
         const completion = (await solveResp.json()) as OpenRouterChatResponse;
-        const content = String(completion?.choices?.[0]?.message?.content ?? "").trim();
+        const solveRaw = String(completion?.choices?.[0]?.message?.content ?? "");
+        const content = solveRaw.trim();
+
+        console.log("[save-canvas][solve]", {
+            model: completion?.model ?? solveModelRequested,
+            extractedText,
+            raw: solveRaw,
+        });
+
         const parsed = tryParseJson<unknown>(stripCodeFences(content));
         if (!parsed.ok) {
             return NextResponse.json(
@@ -149,6 +194,16 @@ export async function POST(req: Request) {
             extractedText,
             result: parsed.value,
             model: completion?.model,
+            ...(debug
+                ? {
+                    debug: {
+                        ocrModel: ocrModelUsed,
+                        ocrRaw,
+                        solveModel: completion?.model ?? solveModelRequested,
+                        solveRaw,
+                    },
+                }
+                : {}),
         });
     }
     catch (err) {

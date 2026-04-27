@@ -110,16 +110,16 @@ export default function Toolbar({
 
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button 
-                variant="default" 
+              <Button
+                variant="default"
                 onClick={sendCanvasData}
               >
                 <CircleIcon className="mr-2 h-4 w-4" />
-                Calculate
+                Recognize
               </Button>
             </TooltipTrigger>
             <TooltipContent>
-              <p>Process Canvas Data</p>
+              <p>Recognize handwriting via strokes</p>
             </TooltipContent>
           </Tooltip>
         </div>
