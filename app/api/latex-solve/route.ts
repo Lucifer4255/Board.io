@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 
+export const maxDuration = 30;
+
 interface LatexSolvePayload {
   latex: string;
 }
@@ -39,12 +41,16 @@ export async function POST(req: Request) {
       `Example: input "\\frac{d}{dx}x^3" → output "3x^2"\n` +
       `Example: input "\\int x^2 dx" → output "\\frac{x^3}{3} + C"`;
 
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 20_000);
+
     const resp = await fetch("https://openrouter.ai/api/v1/chat/completions", {
       method: "POST",
       headers: {
         Authorization: `Bearer ${apiKey}`,
         "Content-Type": "application/json",
       },
+      signal: controller.signal,
       body: JSON.stringify({
         model,
         max_tokens: 300,
@@ -52,6 +58,8 @@ export async function POST(req: Request) {
         messages: [{ role: "user", content: prompt }],
       }),
     });
+
+    clearTimeout(timeout);
 
     if (!resp.ok) {
       const body = await resp.text();

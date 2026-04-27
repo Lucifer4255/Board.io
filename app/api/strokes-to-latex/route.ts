@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 
+export const maxDuration = 30;
+
 interface ImageToLatexPayload {
   image: string; // data URL: "data:image/jpeg;base64,..."
   previousExpression?: string | null;
@@ -38,11 +40,15 @@ export async function POST(req: Request) {
 
     const model = process.env.GEMINI_MODEL ?? "gemini-flash-latest";
 
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 20_000);
+
     const resp = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        signal: controller.signal,
         body: JSON.stringify({
           contents: [
             {
@@ -69,6 +75,8 @@ export async function POST(req: Request) {
         }),
       }
     );
+
+    clearTimeout(timeout);
 
     if (!resp.ok) {
       const body = await resp.text();
