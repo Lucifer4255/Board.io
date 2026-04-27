@@ -2,6 +2,9 @@
 
 A dynamic drawing canvas application inspired by Apple's Math app. It allows users to inscribe equations or logical problems and receive instant solutions using real-time computation and analysis.
 
+<img width="400" height="201" alt="Screencast_board_io" src="https://github.com/user-attachments/assets/d8a243e0-03ee-4006-8405-be892d5e59ee" />
+
+
 ## 🚀 Features
 - **Handwriting Input Processing:** Smooth drawing canvas for inscribing equations and logical problems.
 - **Real-time Computation:** Uses the Gemini API for solving mathematical and logical problems instantly.
